@@ -108,6 +108,19 @@ compatible. Then, follow your OSGi container's instructions for adding a bundle,
 typically involving placing the JAR in a `bundle` directory or installing it
 through the container's command line interface.
 
+JamaicaAMS (Application Management System, AMS) is a modular and extensible
+application framework, especially designed and tailored for Industrial IoT use
+cases. It provides a powerful runtime environment for Java-based applications
+and components, thereby supporting not only static but also highly dynamic and
+distributed application scenarios.  JamaicaAMS targets in particular at
+heterogeneous embedded and mobile devices with sparse re- sources, providing
+performance guarantees for their applications during runtime. The strength of
+JamaicaAMS results from the combination of two solid open standards: OSGi , that
+specifies a software architecture to create modular applications and services,
+called bundles, and the Real-Time Specification for Java (RTSJ). Please contact
+[aicas](info@aicas.com) to have an evaluation version of JamaicaAMS.
+
+
 ## GitHub Actions CI/CD
 
 This project is configured with GitHub Actions for continuous integration and
