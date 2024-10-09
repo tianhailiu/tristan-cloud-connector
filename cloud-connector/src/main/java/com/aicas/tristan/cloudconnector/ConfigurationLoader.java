@@ -29,7 +29,7 @@ public class ConfigurationLoader
         .getResourceAsStream(configFilePath);
       if (inputStream == null)
       {
-        throw new RuntimeException(
+        throw new IOException(
           "Embedded config file not found: " + configFilePath);
       }
       return objectMapper.readValue(inputStream, ApplicationConfig.class);

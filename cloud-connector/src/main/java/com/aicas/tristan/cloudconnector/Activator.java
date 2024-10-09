@@ -4,41 +4,35 @@
  *------------------------------------------------------------------------*/
 package com.aicas.tristan.cloudconnector;
 
-import lombok.extern.slf4j.Slf4j;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Slf4j
 public class Activator implements BundleActivator
 {
+  private static final Logger log =
+    org.slf4j.LoggerFactory.getLogger(Activator.class);
   private ExecutorService executorService;
-  private List<MqttClientWrapper> mqttClients;
+  private MqttClientWrapper mqttClient;
 
   @Override
   public void start(BundleContext context)
     throws
     Exception
   {
+    String serverUri = System.getProperty("edg.server.uri",
+                                          "tcp://demo-jamaicaedg.aicas.com:1883");
+    String deviceName = System.getProperty("edg.device.name",
+                                           "Tristan-CloudConnector-Demo-Device");
+    String deviceToken = System.getProperty("edg.device.token", "fake-token");
+
     executorService = Executors.newCachedThreadPool();
-    mqttClients = new ArrayList<>();
-
-    ApplicationConfig config =
-      ConfigurationLoader.loadApplicationConfig("config.json");
-
-    for (DeviceConfig deviceConfig : config.getDeviceConfigs())
-    {
-      MqttClientWrapper mqttClient =
-        new MqttClientWrapper(config.getEdgServerUri(),
-                              deviceConfig.getToken());
-      DataProcessor dataProcessor = new DataProcessor(mqttClient, deviceConfig);
-      mqttClients.add(mqttClient);
-      executorService.submit(dataProcessor);
-    }
+    mqttClient = new MqttClientWrapper(serverUri, deviceName, deviceToken);
+    DataProcessor dataProcessor = new DataProcessor(mqttClient, "automotive-trace.json");
+    executorService.submit(dataProcessor);
   }
 
   @Override
@@ -51,11 +45,11 @@ public class Activator implements BundleActivator
       executorService.shutdownNow();
     }
 
-    for (MqttClientWrapper client : mqttClients)
+    if (mqttClient != null)
     {
       try
       {
-        client.disconnect();
+        mqttClient.disconnect();
       }
       catch (Exception e)
       {

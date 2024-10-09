@@ -1,23 +1,37 @@
-# TRISTAN Cloud Connector
+# TRISTAN Automotive Gateway
 
-   ```
-   [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-   [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
-   [![GitHub issues](https://img.shields.io/github/issues/aicas/tristan-automotive-gateway)](https://github.com/aicas/tristan-automotive-gateway/issues)
-   [![GitHub forks](https://img.shields.io/github/forks/aicas/tristan-automotive-gateway)](https://github.com/aicas/tristan-automotive-gateway/network)
-   [![GitHub stars](https://img.shields.io/github/stars/aicas/tristan-automotive-gateway)](https://github.com/aicas/tristan-automotive-gateway/stargazers)
-   [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/aicas/tristan-automotive-gateway/actions/workflows/badge.svg)](https://github.com/aicas/tristan-automotive-gateway/actions/workflows/ci.yml)
-   [![Documentation Status](https://readthedocs.org/projects/tristan-automotive-gateway/badge/?version=latest)](https://tristan.readthedocs.io/en/latest/?badge=latest)
-   ```
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)
+![GitHub issues](https://img.shields.io/github/issues/aicas/tristan-automotive-gateway)
+![GitHub forks](https://img.shields.io/github/forks/aicas/tristan-automotive-gateway)
+![GitHub stars](https://img.shields.io/github/stars/aicas/tristan-automotive-gateway)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/aicas/tristan-automotive-gateway/actions/workflows/badge.svg)
+![Documentation Status](https://readthedocs.org/projects/tristan-automotive-gateway/badge/?version=latest)
 
-CloudConnector is a Java application developed by aicas (www.aicas.com) as part
-of the contributions to the EU-funded project
-TRISTAN (https://cordis.europa.eu/project/id/101095947). It connects to MQTT
-servers and publishes device telemetry data. This application facilitates
-connections to MQTT servers and publishes device telemetry data. Designed for
-versatility and ease of use, it supports multiple devices via a configurable
-JSON file and can be deployed both as a standalone Java application and as an
-OSGi bundle in an OSGi-based framework.
+Tristan Automotive Gateway is a set of Java OSGi applications developed by
+[aicas](https://www.aicas.com) as part of the contributions to
+the [EU-funded project TRISTAN](https://cordis.europa.eu/project/id/101095947).
+
+This project contains the **Cloud Connector**, an OSGi bundle that connects to
+the Edge Data Gateway (**aicas JamaicaEDG**) to manage automotive data streams,
+and the **Device Client**, an OSgi bundle that connects to the Cloud Control
+Center (**aicas JamaicaEDP**) to manage devices and bundles remotely. These
+bundles are designed to run within an OSGi container, such as 
+**aicas JamaicaAMS** and **Apache Felix**, but can also be packaged as a fat
+JAR for standalone execution.
+
+- **Cloud Connector** An OSGi bundle connects to MQTT servers and publishes
+  device telemetry data. This application facilitates connections to MQTT
+  servers and publishes device telemetry data. Designed for versatility and ease
+  of use, it supports multiple devices via a configurable JSON file and can be
+  deployed both as a standalone Java application and as an OSGi bundle in an
+  OSGi-based framework.
+- **Device Client** An OSGi bundle running on the RISC-V device on top of the
+  Application Management System *JamaicaAMS* developed by aicas to connect to
+  the Cloud Control Center for status and configuration information. Allows
+  configuration and bundle installations/updates on the RISC-V device.
+- **Device Client API** Public API specification allowing third-parties to
+  implement their own Device Client.
 
 ## About TRISTAN
 
@@ -32,103 +46,140 @@ architecture. TRISTAN's holistic approach encompasses advancements in electronic
 design automation tools and the entire software stack, promising a significant
 leap forward in open-source hardware and software utilization.
 
-## Features
+## Table of Contents
 
-- Connects to MQTT servers using device-specific tokens.
-- Publishes telemetry data from configurable trace files.
-- Supports multiple devices through a single configuration file.
-- Can be deployed as a bundle in OSGi-based frameworks.
-- Integrates with GitHub Actions for CI/CD, including code quality checks and
-  artifact publishing.
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Building the Project](#building-the-project)
+- [Running the Bundle in Apache Felix](#running-the-bundle-in-apache-felix)
+- [Running the Fat JAR](#running-the-fat-jar)
+- [Running the Bundle in JamaicaAMS](#running-the-bundle-in-jamaicaams)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Getting Started
+## Project Structure
 
-### Prerequisites
+This project is structured as follows:
 
-- JDK 8
-- Maven 3.6.0 or later
+- **cloud-connector**: The module that builds the Cloud Connector OSGi bundle
+  and fat JAR. An OSGi bundle connects to MQTT servers and publishes device
+  telemetry data. This application facilitates connections to MQTT servers and
+  publishes device telemetry data. Designed for versatility and ease of use, it
+  supports multiple devices via a configurable JSON file and can be deployed
+  both as a standalone Java application and as an OSGi bundle in an OSGi-based
+  framework.
+- **device-client**: The module that builds the Device Client OSGi bundle. An
+  OSGi bundle running on the RISC-V device on top of the Application Management
+  System *JamaicaAMS* developed by aicas to connect to the Cloud Control Center
+  for status and configuration information. Allows configuration and bundle
+  installations/updates on the RISC-V device.
 
-### Installation
+## Prerequisites
 
-1. Clone the repository:
+Before you can build and run this project, ensure you have the following
+installed:
 
-   ```sh
-   git clone https://github.com/aicas/CloudConnector.git
-   cd CloudConnector
-   ```
+- **Java 8** or later (Java 8 is recommended for OSGi compatibility especially
+  when you run bundles on JamaicaAMS).
+- **Maven 3.9.6** or later.
+- **JamaicaAMS** Realtime OSGi framework developed by aicas.
+- **Apache Felix** OSGi
+  framework ([Download Felix](https://felix.apache.org/documentation/downloads.html)).
+- **JamaicaEDG** Realtime Data Visualization developed by aicas.
 
-2. Build the project with Maven:
+> **_NOTE:_**  
+> Please contact aicas ([info@aicas.com](info@aicas.com)) for **JamaicaAMS** and
+**JamaicaEDG** to have full experiences of this project.
 
-    ```sh
-    mvn clean package
-    ```
+## Building the Project
 
-### Configuration
+To build the OSGi bundle and fat JAR, run the following Maven commands:
 
-Modify the config.json file in the root directory to set up your device
-configurations, including the MQTT server URI, device tokens, and trace files.
+```bash
+mvn clean package
+```
 
-Example config.json:
+This will generate two artifacts under `cloud-connector/target/`:
 
-   ```json
-   {
-     "edp.server.uri": "tcp://demo-jamaicaedg.aicas.com:1883",
-     "devices": [
-       {
-         "name": "device1",
-         "token": "token1",
-         "trace": "automotive-trace.json",
-         "delay": 500
-       },
-       {
-         "name": "device2",
-         "token": "token2",
-         "trace": "forklift-trace.json",
-         "delay": 1000
-       }
-     ]
-   }
-   ```
+• cloud-connector-1.0.0-SNAPSHOT.jar: The OSGi bundle. •
+cloud-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar: The fat JAR with all
+dependencies.
 
-### Usage
+## Running the Bundle in Apache Felix
 
-#### As a Standalone Java Application:
+### Step 1: Download and Install Apache Felix
 
-Run the application using:
+Download [Apache Felix](https://felix.apache.org/documentation/downloads.html)
+from the official website and extract it to a directory of your choice.
 
-   ```sh
-   java -jar target/cloud-connector-1.0.0-SNAPSHOT.jar
-   ```
+### Step 2: Start Felix
 
-#### As an OSGi bundle:
+Run Apache Felix from the command line:
 
-To deploy CloudConnector as a bundle in an OSGi-based framework (e.g.,
-JamaicaAMS, Apache Felix, Eclipse Equinox), ensure the JAR built is OSGi
-compatible. Then, follow your OSGi container's instructions for adding a bundle,
-typically involving placing the JAR in a `bundle` directory or installing it
-through the container's command line interface.
+```bash
+java -Dedg.device.token=<device-token> -jar bin/felix.jar
+```
+
+#### Configuring System Properties
+
+You can set system properties in Felix that can be accessed in the OSGi bundle
+using System.getProperty(). There are two ways to configure system properties:
+
+##### Option 1: Command Line
+
+Pass the properties directly when starting Felix:
+
+```bash
+java -Dedg.device.token=<device-token> -jar bin/felix.jar
+```
+
+##### Option 2: Felix config.properties
+
+Edit Felix’s conf/config.properties file to set system properties:
+
+```bash
+edg.device.token=<device-token>
+```
+
+### Step 3: Install and Start the Bundle
+
+Once Felix is running, use the Felix Gogo shell to install and start the OSGi
+bundle.
+
+```bash
+g! install file:/path/to/cloud-connector-1.0.0-SNAPSHOT.jar 
+g! start <bundle-id>
+```
+
+Replace <bundle-id> with the actual ID of the installed bundle (you can get this
+from the `g! list` command).
+
+### Step 4: Verify the Connection
+
+The bundle will attempt to connect to the MQTT broker using the configuration in
+config.json. You should see logs indicating a successful connection.
+
+## Running the Fat JAR
+
+Alternatively, you can run the fat JAR outside of the OSGi container:
+
+```bash
+java -Dedg.device.token=<device-token> -jar /path/to/cloud-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar
+```
+
+## Running the Bundle in JamaicaAMS
 
 JamaicaAMS (Application Management System, AMS) is a modular and extensible
 application framework, especially designed and tailored for Industrial IoT use
 cases. It provides a powerful runtime environment for Java-based applications
 and components, thereby supporting not only static but also highly dynamic and
-distributed application scenarios.  JamaicaAMS targets in particular at
+distributed application scenarios. JamaicaAMS targets in particular at
 heterogeneous embedded and mobile devices with sparse re- sources, providing
 performance guarantees for their applications during runtime. The strength of
 JamaicaAMS results from the combination of two solid open standards: OSGi , that
 specifies a software architecture to create modular applications and services,
 called bundles, and the Real-Time Specification for Java (RTSJ). Please contact
 [aicas](info@aicas.com) to have an evaluation version of JamaicaAMS.
-
-
-## GitHub Actions CI/CD
-
-This project is configured with GitHub Actions for continuous integration and
-deployment, including:
-
-- Building and testing the Java application.
-- Performing code quality checks with SonarCloud.
-- Publishing artifacts to Maven Central.
 
 ## Contributing
 

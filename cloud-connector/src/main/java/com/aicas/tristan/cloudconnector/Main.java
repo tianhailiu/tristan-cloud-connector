@@ -4,50 +4,30 @@
  *------------------------------------------------------------------------*/
 package com.aicas.tristan.cloudconnector;
 
-import lombok.extern.slf4j.Slf4j;
-import picocli.CommandLine;
-
-import java.util.concurrent.Callable;
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Slf4j
-@CommandLine.Command(name = "CloudConnector",
-  mixinStandardHelpOptions = true,
-  version = "CloudConnector 1.0.0-SNAPSHOT",
-  description = "Publish MQTT messages to JamaicaEDG Dashboard.")
-public class Main implements Callable<Integer>
+public class Main
 {
-  private static final String CONFIG_FILE_PATH = "config.json";
-
   public static void main(String[] args)
-  {
-    new CommandLine(new Main()).execute(args);
-  }
-
-  @Override
-  public Integer call()
     throws
-    Exception
+    IOException
   {
-    log.error("Start running");
-    ApplicationConfig config =
-      ConfigurationLoader.loadApplicationConfig(CONFIG_FILE_PATH);
-    ExecutorService executorService =
-      Executors.newFixedThreadPool(config.getDeviceConfigs().size());
+    String serverUri = System.getProperty("edg.server.uri",
+                                          "tcp://demo-jamaicaedg.aicas.com:1883");
+    String deviceName = System.getProperty("edg.device.name",
+                                           "Tristan-CloudConnector-Demo-Device");
+    String deviceToken = System.getProperty("edg.device.token", "fake-token");
 
-    for (DeviceConfig deviceConfig : config.getDeviceConfigs())
-    {
-      MqttClientWrapper mqttClient =
-        new MqttClientWrapper(config.getEdgServerUri(),
-                              deviceConfig.getToken());
-      DataProcessor dataProcessor = new DataProcessor(mqttClient, deviceConfig);
-      executorService.submit(dataProcessor);
-    }
+    ExecutorService executorService = Executors.newCachedThreadPool();
+    MqttClientWrapper mqttClient =
+      new MqttClientWrapper(serverUri, deviceName, deviceToken);
+    DataProcessor dataProcessor =
+      new DataProcessor(mqttClient, "automotive-trace.json");
+    executorService.submit(dataProcessor);
 
     Runtime.getRuntime()
       .addShutdownHook(new Thread(executorService::shutdownNow));
-
-    return 0;
   }
 }

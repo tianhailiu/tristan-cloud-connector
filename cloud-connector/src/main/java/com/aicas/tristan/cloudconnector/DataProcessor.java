@@ -6,10 +6,11 @@ package com.aicas.tristan.cloudconnector;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.slf4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
@@ -19,22 +20,22 @@ import java.util.Map;
  * loading trace data from a specified source, and publishing this data to a specified topic.
  * It implements the {@code Runnable} interface, allowing it to be executed in a separate thread.
  */
-@Slf4j
 public class DataProcessor implements Runnable
 {
+  private static final Logger log =
+    org.slf4j.LoggerFactory.getLogger(DataProcessor.class);
   private final MqttClientWrapper mqttClient;
-  private final DeviceConfig deviceConfig;
+  private final String traceFile;
 
   /**
    * Constructs an instance of the DataProcessor.
    *
    * @param mqttClient the MQTT client wrapper to use for publishing messages.
-   * @param deviceConfig the configuration for the device, including trace file and delay.
    */
-  public DataProcessor(MqttClientWrapper mqttClient, DeviceConfig deviceConfig)
+  public DataProcessor(MqttClientWrapper mqttClient, String traceFile)
   {
     this.mqttClient = mqttClient;
-    this.deviceConfig = deviceConfig;
+    this.traceFile = traceFile;
   }
 
   /**
@@ -46,25 +47,30 @@ public class DataProcessor implements Runnable
   {
     try
     {
+      log.info("Connect {} to MQTT broker", mqttClient.getDeviceName());
       mqttClient.connect();
-      List<Map<String, Object>> traceData =
-        loadTraceData(deviceConfig.getTrace());
+      log.info("Load automotive traces");
+      List<Map<String, Object>> traceData = loadTraceData(traceFile);
+      log.info("Sending data to JamaicaEDG");
       ObjectMapper mapper = new ObjectMapper();
       for (Map<String, Object> dataPoint : traceData)
       {
         String payload = mapper.writeValueAsString(dataPoint);
+        log.trace("{} publishes message {}", mqttClient.getDeviceName(),
+                  payload);
         mqttClient.publish("v1/devices/me/telemetry", payload);
-        Thread.sleep(deviceConfig.getDelay());
+        Thread.sleep(1000);
       }
     }
     catch (Exception e)
     {
-      e.printStackTrace();
+      log.error(e.getMessage());
     }
     finally
     {
       try
       {
+        log.info("Disconnect MQTT connection");
         mqttClient.disconnect();
       }
       catch (MqttException e)
@@ -102,7 +108,7 @@ public class DataProcessor implements Runnable
         getClass().getClassLoader().getResourceAsStream(traceFilePath);
       if (inputStream == null)
       {
-        throw new RuntimeException(
+        throw new IOException(
           "Embedded trace file not found: " + traceFilePath);
       }
       return objectMapper.readValue(inputStream,

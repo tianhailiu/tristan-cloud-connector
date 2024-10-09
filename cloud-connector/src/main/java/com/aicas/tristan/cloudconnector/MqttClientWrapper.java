@@ -4,9 +4,6 @@
  *------------------------------------------------------------------------*/
 package com.aicas.tristan.cloudconnector;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
@@ -17,20 +14,21 @@ import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.slf4j.Logger;
 
-import java.nio.charset.StandardCharsets;
+import java.net.ConnectException;
 
 /**
  * The {@code MqttClientWrapper} class encapsulates operations for connecting to,
  * publishing messages to, and disconnecting from an MQTT server using the Eclipse Paho MQTT client.
  * It simplifies the MQTT client's usage by providing a higher-level interface for MQTT operations.
  */
-@Slf4j
-@Getter
-@Setter
 public class MqttClientWrapper
 {
+  private static final Logger log =
+    org.slf4j.LoggerFactory.getLogger(MqttClientWrapper.class);
   private final String serverUri;
+  private final String deviceName;
   private final String accessToken;
   private MqttAsyncClient client;
 
@@ -38,11 +36,14 @@ public class MqttClientWrapper
    * Constructs an instance of the MQTT client wrapper.
    *
    * @param serverUri the URI of the MQTT server to connect to.
+   * @param deviceName the device name
    * @param accessToken the access token for authenticating with the MQTT server.
    */
-  public MqttClientWrapper(String serverUri, String accessToken)
+  public MqttClientWrapper(String serverUri, String deviceName,
+                           String accessToken)
   {
     this.serverUri = serverUri;
+    this.deviceName = deviceName;
     this.accessToken = accessToken;
   }
 
@@ -62,7 +63,7 @@ public class MqttClientWrapper
       @Override
       public void connectionLost(Throwable me)
       {
-        System.out.println("Connection lost: " + me.getMessage());
+        log.error("Connection lost: {}", me.getMessage());
       }
 
       @Override
@@ -70,21 +71,14 @@ public class MqttClientWrapper
         throws
         Exception
       {
-        System.out.println("Message arrived: " + s);
+        log.debug("Message arrived: {}", s);
       }
 
       @Override
       public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken)
       {
         MqttDeliveryToken token = (MqttDeliveryToken) iMqttDeliveryToken;
-        try
-        {
-          System.out.println("Message delivered id: " + token.getMessage());
-        }
-        catch (MqttException e)
-        {
-          throw new RuntimeException(e);
-        }
+        log.debug("Message delivered id: {}", token.getMessageId());
       }
     });
     MqttConnectOptions options = new MqttConnectOptions();
@@ -97,13 +91,14 @@ public class MqttClientWrapper
       @Override
       public void onSuccess(IMqttToken iMqttToken)
       {
-        System.out.println("Connected to Cloud.");
+        log.info("Connected to Cloud.");
       }
 
       @Override
       public void onFailure(IMqttToken iMqttToken, Throwable e)
       {
-        System.out.println("Failed to connect to Cloud: " + e.getMessage());
+        log.error("Failed to connect {} to Cloud: {}", deviceName,
+                  e.getMessage());
       }
     }).waitForCompletion();
   }
@@ -135,8 +130,32 @@ public class MqttClientWrapper
     if (client != null && client.isConnected())
     {
       client.disconnect().waitForCompletion();
-      System.out.println("Disconnected from Cloud.");
+      log.info("{} disconnected from Cloud.", deviceName);
     }
   }
 
+  public String getServerUri()
+  {
+    return this.serverUri;
+  }
+
+  public String getAccessToken()
+  {
+    return this.accessToken;
+  }
+
+  public String getDeviceName()
+  {
+    return deviceName;
+  }
+
+  public MqttAsyncClient getClient()
+  {
+    return this.client;
+  }
+
+  public void setClient(MqttAsyncClient client)
+  {
+    this.client = client;
+  }
 }

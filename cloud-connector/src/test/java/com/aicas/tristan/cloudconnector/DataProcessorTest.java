@@ -21,20 +21,13 @@ class DataProcessorTest
 {
 
   private MqttClientWrapper mockMqttClient;
-  private DeviceConfig deviceConfig;
   private DataProcessor dataProcessor;
 
   @BeforeEach
   void setUp()
   {
     mockMqttClient = mock(MqttClientWrapper.class);
-    deviceConfig = new DeviceConfig();
-    deviceConfig.setName("testDevice");
-    deviceConfig.setToken("testToken");
-    deviceConfig.setTrace("testTrace.json");
-    deviceConfig.setDelay(500);
-
-    dataProcessor = new DataProcessor(mockMqttClient, deviceConfig);
+    dataProcessor = new DataProcessor(mockMqttClient, "testTrace.json");
   }
 
   @Test
