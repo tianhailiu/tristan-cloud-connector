@@ -5,7 +5,9 @@
     </encoder>
   </appender>
 
-  <root level="info">
+  <logger name="com.aicas.tristan.cloudconnector.DataProcessor" level="debug"/>
+
+  <root level="debug">
     <appender-ref ref="STDOUT"/>
   </root>
 </configuration>
