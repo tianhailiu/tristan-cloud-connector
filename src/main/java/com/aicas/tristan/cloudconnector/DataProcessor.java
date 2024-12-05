@@ -47,16 +47,16 @@ public class DataProcessor implements Runnable
   {
     try
     {
-      log.info("Connect {} to MQTT broker", mqttClient.getDeviceName());
+      log.info("Connect {} to aicas EDG {}", mqttClient.getDeviceName(), mqttClient.getServerUri());
       mqttClient.connect();
-      log.info("Load automotive traces");
+      log.info("Load automotive traces {}", traceFile);
       List<Map<String, Object>> traceData = loadTraceData(traceFile);
-      log.info("Sending data to JamaicaEDG");
+      log.info("Sending data to aicas EDG");
       ObjectMapper mapper = new ObjectMapper();
       for (Map<String, Object> dataPoint : traceData)
       {
         String payload = mapper.writeValueAsString(dataPoint);
-        log.trace("{} publishes message {}", mqttClient.getDeviceName(),
+        log.trace("{} publishes a message {}", mqttClient.getDeviceName(),
                   payload);
         mqttClient.publish("v1/devices/me/telemetry", payload);
         Thread.sleep(1000);
@@ -97,6 +97,7 @@ public class DataProcessor implements Runnable
     ObjectMapper objectMapper = new ObjectMapper();
     if (traceFile.exists())
     {
+      log.info("loading automotive trace file from path {}", traceFile);
       return objectMapper.readValue(traceFile,
                                     new TypeReference<List<Map<String, Object>>>()
                                     {
@@ -104,6 +105,7 @@ public class DataProcessor implements Runnable
     }
     else
     {
+      log.info("loading automotive trace file from stream {}", traceFile);
       InputStream inputStream =
         getClass().getClassLoader().getResourceAsStream(traceFilePath);
       if (inputStream == null)

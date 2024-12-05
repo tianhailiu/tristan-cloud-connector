@@ -133,7 +133,8 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.aicas.tristan.cloudconnector.Main</mainClass>
+              <mainClass>com.aicas.tristan.cloudconnector.CloudConnector</mainClass>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
             </manifest>
           </archive>
           <descriptorRefs>
@@ -171,6 +172,11 @@
       <artifactId>jackson-databind</artifactId>
       <version>2.18.0</version>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>info.picocli</groupId>
+      <artifactId>picocli</artifactId>
+      <version>4.7.6</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
