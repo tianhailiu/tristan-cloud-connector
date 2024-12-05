@@ -11,11 +11,10 @@
 Tristan Cloud Connector is an OSGi bundle developed
 by [aicas](https://www.aicas.com) as part of the contributions to
 the [EU-funded project TRISTAN](https://cordis.europa.eu/project/id/101095947).
-The bundle connects to the Edge Data Gateway (**aicas JamaicaEDG**) to manage
+The bundle connects to the Edge Data Gateway (**aicas EDG**) to manage
 automotive data streams. This bundle is designed to run within an OSGi
-container, such as
-**aicas JamaicaAMS** and **Apache Felix**, but can also be packaged as a fat JAR
-for standalone execution.
+container, such as **JamaicaAMS** and **Apache Felix**, but can also be packaged
+as a fat JAR for standalone execution.
 
 ## About TRISTAN
 
@@ -65,11 +64,11 @@ installed:
 - **JamaicaAMS** Realtime OSGi framework developed by aicas.
 - **Apache Felix** OSGi
   framework ([Download Felix](https://felix.apache.org/documentation/downloads.html)).
-- **JamaicaEDG** Realtime Data Visualization developed by aicas.
+- **aicas EDG** Realtime Data Visualization developed by aicas.
 
 > **_NOTE:_**  
 > Please contact aicas ([info@aicas.com](info@aicas.com)) for **JamaicaAMS** and
-**JamaicaEDG** to have full experiences of this project.
+**EDG** to have full experiences of this project.
 
 ## Building the Project
 
@@ -144,7 +143,13 @@ config.json. You should see logs indicating a successful connection.
 Alternatively, you can run the fat JAR outside the OSGi container:
 
 ```bash
-java -Dedg.device.token=<device-token> -jar /path/to/cloud-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar
+java -jar /path/to/cloud-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar --token=<device-token> 
+```
+
+You can get usage
+
+```bash
+java -jar /path/to/cloud-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar --help 
 ```
 
 ## Running the Bundle in JamaicaAMS
