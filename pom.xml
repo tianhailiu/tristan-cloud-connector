@@ -85,14 +85,6 @@
             </goals>
             <configuration>
               <rules>
-                <requireMavenVersion>
-                  <version>3.9.6</version>
-                  <message>You need to use Maven 3.9.6!</message>
-                </requireMavenVersion>
-                <requireJavaVersion>
-                  <version>1.8.0</version>
-                  <message>You need to use Java 8!</message>
-                </requireJavaVersion>
                 <requireReleaseDeps>
                   <onlyWhenRelease>true</onlyWhenRelease>
                   <message>No Snapshots Allowed!</message>
