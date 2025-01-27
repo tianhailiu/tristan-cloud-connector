@@ -23,6 +23,7 @@ public class Activator implements BundleActivator
     throws
     Exception
   {
+    printDescription();
     String serverUri = System.getProperty("edg.server.uri",
                                           "tcp://demo-jamaicaedg.aicas.com:1883");
     String deviceName = System.getProperty("edg.device.name",
@@ -57,5 +58,13 @@ public class Activator implements BundleActivator
       }
     }
   }
-}
 
+  private void printDescription()
+  {
+    String description = "TRISTAN Cloud Connector\n" +
+            "========================\n" +
+            "Tristan Cloud Connector is an OSGi bundle developed by aicas as part of the contributions to the EU-funded project TRISTAN. The bundle connects to the Edge Data Gateway (aicas EDG) to manage automotive data streams. This bundle is designed to run within an OSGi container, such as aicas JamaicaAMS and Apache Felix, but can also be packaged as a fat JAR for standalone execution.\n" +
+            "Copyright(c) 2024, aicas GmbH; all rights reserved.";
+    System.out.println(description);
+  }
+}
