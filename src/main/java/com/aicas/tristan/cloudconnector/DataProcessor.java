@@ -147,6 +147,13 @@ public class DataProcessor implements Runnable
                mqttClient.getPublishedCount(),
                mqttClient.getConfirmedCount(),
                mqttClient.getFailedCount());
+      double avgLatency = mqttClient.getAverageLatencyUs();
+      if (avgLatency >= 0)
+      {
+        log.info("Average publish-to-ack latency: {} µs (over {} messages)",
+                 String.format("%.1f", avgLatency),
+                 mqttClient.getLatencySampleCount());
+      }
       long lost = mqttClient.getPublishedCount() - mqttClient.getConfirmedCount();
       if (lost > 0)
       {

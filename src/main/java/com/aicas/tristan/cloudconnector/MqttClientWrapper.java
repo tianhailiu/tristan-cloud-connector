@@ -22,6 +22,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.KeyStore;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -42,6 +43,9 @@ public class MqttClientWrapper
   private final AtomicLong publishedCount = new AtomicLong(0);
   private final AtomicLong confirmedCount = new AtomicLong(0);
   private final AtomicLong failedCount = new AtomicLong(0);
+  private final ConcurrentHashMap<Integer, Long> publishTimestamps = new ConcurrentHashMap<>();
+  private final AtomicLong totalLatencyUs = new AtomicLong(0);
+  private final AtomicLong latencySampleCount = new AtomicLong(0);
 
   /**
    * Constructs an instance of the MQTT client wrapper (plain TCP, no TLS).
@@ -109,8 +113,20 @@ public class MqttClientWrapper
       {
         MqttDeliveryToken token = (MqttDeliveryToken) iMqttDeliveryToken;
         long confirmed = confirmedCount.incrementAndGet();
-        log.debug("Message delivered id: {}, confirmed so far: {}",
-                  token.getMessageId(), confirmed);
+        Long publishTimeNs = publishTimestamps.remove(token.getMessageId());
+        if (publishTimeNs != null)
+        {
+          long latencyUs = (System.nanoTime() - publishTimeNs) / 1000;
+          totalLatencyUs.addAndGet(latencyUs);
+          latencySampleCount.incrementAndGet();
+          log.debug("Message delivered id: {}, latency: {} µs, confirmed so far: {}",
+                    token.getMessageId(), latencyUs, confirmed);
+        }
+        else
+        {
+          log.debug("Message delivered id: {}, confirmed so far: {}",
+                    token.getMessageId(), confirmed);
+        }
       }
     });
 
@@ -170,9 +186,11 @@ public class MqttClientWrapper
     MqttException
   {
     MqttMessage message = new MqttMessage(payload.getBytes());
+    message.setQos(1);
     try
     {
-      client.publish(topic, message);
+      IMqttDeliveryToken token = client.publish(topic, message);
+      publishTimestamps.put(token.getMessageId(), System.nanoTime());
       publishedCount.incrementAndGet();
     }
     catch (MqttException e)
@@ -210,6 +228,32 @@ public class MqttClientWrapper
   public long getFailedCount()
   {
     return failedCount.get();
+  }
+
+  /**
+   * Returns the average publish-to-ack latency in microseconds,
+   * or -1 if no samples have been recorded.
+   *
+   * @return the average latency in microseconds.
+   */
+  public double getAverageLatencyUs()
+  {
+    long samples = latencySampleCount.get();
+    if (samples == 0)
+    {
+      return -1;
+    }
+    return totalLatencyUs.get() / (double) samples;
+  }
+
+  /**
+   * Returns the number of latency samples recorded.
+   *
+   * @return the latency sample count.
+   */
+  public long getLatencySampleCount()
+  {
+    return latencySampleCount.get();
   }
 
   /**
