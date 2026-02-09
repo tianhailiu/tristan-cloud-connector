@@ -123,7 +123,8 @@
               org.xml.sax,
               org.xml.sax.helpers,
               javax.net,
-              javax.xml.parsers
+              javax.xml.parsers,
+              com.sun.management;resolution:=optional
             </Import-Package>
             <Export-Package>
               !*

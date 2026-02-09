@@ -100,9 +100,13 @@ public class DataProcessor implements Runnable
       log.info("Sending data to aicas EDG at interval {} ms",
                publishIntervalMs);
 
+      ResourceMonitor resourceMonitor = new ResourceMonitor();
+      resourceMonitor.sample("before publishing");
+
       ObjectMapper mapper = new ObjectMapper();
       Iterator<Map<String, Object>> iterator = traceData.iterator();
       CountDownLatch doneLatch = new CountDownLatch(1);
+      final long[] messageIndex = { 0 };
 
       scheduler.scheduleAtFixedRate(() ->
       {
@@ -120,6 +124,8 @@ public class DataProcessor implements Runnable
           log.trace("{} publishes a message {}",
                     mqttClient.getDeviceName(), payload);
           mqttClient.publish("v1/devices/me/telemetry", payload);
+          messageIndex[0]++;
+          resourceMonitor.sample("message #" + messageIndex[0]);
         }
         catch (Exception e)
         {
@@ -128,6 +134,7 @@ public class DataProcessor implements Runnable
       }, 0, publishIntervalMs, TimeUnit.MILLISECONDS);
 
       doneLatch.await();
+      resourceMonitor.logSummary();
     }
     catch (Exception e)
     {
