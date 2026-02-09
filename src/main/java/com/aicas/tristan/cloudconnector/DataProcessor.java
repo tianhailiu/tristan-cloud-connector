@@ -12,9 +12,14 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The {@code DataProcessor} class is responsible for connecting to the MQTT server,
@@ -28,6 +33,7 @@ public class DataProcessor implements Runnable
   private final MqttClientWrapper mqttClient;
   private final String traceFile;
   private final int topN;
+  private final long publishIntervalMs;
 
   /**
    * Constructs an instance of the DataProcessor.
@@ -37,13 +43,11 @@ public class DataProcessor implements Runnable
    */
   public DataProcessor(MqttClientWrapper mqttClient, String traceFile)
   {
-    this(mqttClient, traceFile, 0);
+    this(mqttClient, traceFile, 0, 1.0);
   }
 
   /**
    * Constructs an instance of the DataProcessor with a configurable top-N mode.
-   * When {@code topN} is greater than zero, only the first N scalar (non-array)
-   * signals from each data point are published.
    *
    * @param mqttClient the MQTT client wrapper to use for publishing messages.
    * @param traceFile  the path to the trace file.
@@ -51,9 +55,31 @@ public class DataProcessor implements Runnable
    */
   public DataProcessor(MqttClientWrapper mqttClient, String traceFile, int topN)
   {
+    this(mqttClient, traceFile, topN, 1.0);
+  }
+
+  /**
+   * Constructs an instance of the DataProcessor with configurable top-N mode
+   * and publish frequency.
+   *
+   * @param mqttClient  the MQTT client wrapper to use for publishing messages.
+   * @param traceFile   the path to the trace file.
+   * @param topN        the number of scalar signals to include (0 or negative means all).
+   * @param frequencyHz the publishing frequency in messages per second (e.g. 2.0 = 2 msg/s).
+   *                    Must be positive. Default is 1.0 (one message per second).
+   */
+  public DataProcessor(MqttClientWrapper mqttClient, String traceFile,
+                       int topN, double frequencyHz)
+  {
+    if (frequencyHz <= 0)
+    {
+      throw new IllegalArgumentException(
+        "Frequency must be positive, got: " + frequencyHz);
+    }
     this.mqttClient = mqttClient;
     this.traceFile = traceFile;
     this.topN = topN;
+    this.publishIntervalMs = Math.round(1000.0 / frequencyHz);
   }
 
   /**
@@ -63,24 +89,45 @@ public class DataProcessor implements Runnable
   @Override
   public void run()
   {
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     try
     {
-      log.info("Connect {} to aicas EDG {}", mqttClient.getDeviceName(), mqttClient.getServerUri());
+      log.info("Connect {} to aicas EDG {}", mqttClient.getDeviceName(),
+               mqttClient.getServerUri());
       mqttClient.connect();
       log.info("Load automotive traces {}", traceFile);
       List<Map<String, Object>> traceData = loadTraceData(traceFile);
-      log.info("Sending data to aicas EDG");
+      log.info("Sending data to aicas EDG at interval {} ms",
+               publishIntervalMs);
+
       ObjectMapper mapper = new ObjectMapper();
-      for (Map<String, Object> dataPoint : traceData)
+      Iterator<Map<String, Object>> iterator = traceData.iterator();
+      CountDownLatch doneLatch = new CountDownLatch(1);
+
+      scheduler.scheduleAtFixedRate(() ->
       {
-        Map<String, Object> effectivePayload =
-          topN > 0 ? selectTopNScalars(dataPoint, topN) : dataPoint;
-        String payload = mapper.writeValueAsString(effectivePayload);
-        log.trace("{} publishes a message {}", mqttClient.getDeviceName(),
-                  payload);
-        mqttClient.publish("v1/devices/me/telemetry", payload);
-        Thread.sleep(1000);
-      }
+        if (!iterator.hasNext())
+        {
+          doneLatch.countDown();
+          return;
+        }
+        try
+        {
+          Map<String, Object> dataPoint = iterator.next();
+          Map<String, Object> effectivePayload =
+            topN > 0 ? selectTopNScalars(dataPoint, topN) : dataPoint;
+          String payload = mapper.writeValueAsString(effectivePayload);
+          log.trace("{} publishes a message {}",
+                    mqttClient.getDeviceName(), payload);
+          mqttClient.publish("v1/devices/me/telemetry", payload);
+        }
+        catch (Exception e)
+        {
+          log.warn("Failed to publish message, will retry on next tick", e);
+        }
+      }, 0, publishIntervalMs, TimeUnit.MILLISECONDS);
+
+      doneLatch.await();
     }
     catch (Exception e)
     {
@@ -88,6 +135,7 @@ public class DataProcessor implements Runnable
     }
     finally
     {
+      scheduler.shutdownNow();
       try
       {
         log.info("Disconnect MQTT connection");

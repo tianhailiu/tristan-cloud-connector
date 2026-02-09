@@ -58,6 +58,13 @@ public class CloudConnector implements Runnable
     description = "Password for the JKS truststore.")
   private String trustStorePassword;
 
+  @CommandLine.Option(
+    names = { "-f", "--frequency" },
+    description = "Publishing frequency in messages per second (e.g. 2.0 = 2 msg/s, " +
+      "0.5 = 1 msg every 2s). Must be positive.",
+    defaultValue = "1.0")
+  private double frequencyHz;
+
   private static final Logger log =
     org.slf4j.LoggerFactory.getLogger(CloudConnector.class);
 
@@ -89,7 +96,7 @@ public class CloudConnector implements Runnable
       new MqttClientWrapper(serverURI, deviceName, deviceToken,
                             trustStorePath, trustStorePassword);
     DataProcessor dataProcessor =
-      new DataProcessor(mqttClient, "automotive-trace.json", topN);
+      new DataProcessor(mqttClient, "automotive-trace.json", topN, frequencyHz);
     executorService.submit(dataProcessor);
 
     Runtime.getRuntime()

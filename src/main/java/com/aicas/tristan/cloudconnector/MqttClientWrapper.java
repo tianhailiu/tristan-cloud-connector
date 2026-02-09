@@ -116,9 +116,16 @@ public class MqttClientWrapper
 
     if (trustStorePath != null)
     {
-      options.setSocketFactory(createSslSocketFactory(trustStorePath,
-                                                      trustStorePassword));
-      log.info("TLS enabled using truststore: {}", trustStorePath);
+      try
+      {
+        options.setSocketFactory(createSslSocketFactory(trustStorePath,
+                                                        trustStorePassword));
+        log.info("TLS enabled using truststore: {}", trustStorePath);
+      }
+      catch (Exception e)
+      {
+        throw new MqttException(e);
+      }
     }
 
     try

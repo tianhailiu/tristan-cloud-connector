@@ -32,11 +32,14 @@ public class Activator implements BundleActivator
     int topN = Integer.parseInt(System.getProperty("edg.top.n", "0"));
     String trustStorePath = System.getProperty("edg.truststore.path");
     String trustStorePassword = System.getProperty("edg.truststore.password");
+    double frequencyHz =
+      Double.parseDouble(System.getProperty("edg.frequency", "1.0"));
 
     executorService = Executors.newCachedThreadPool();
     mqttClient = new MqttClientWrapper(serverUri, deviceName, deviceToken,
                                        trustStorePath, trustStorePassword);
-    DataProcessor dataProcessor = new DataProcessor(mqttClient, "automotive-trace.json", topN);
+    DataProcessor dataProcessor =
+      new DataProcessor(mqttClient, "automotive-trace.json", topN, frequencyHz);
     executorService.submit(dataProcessor);
   }
 
