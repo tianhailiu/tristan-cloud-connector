@@ -111,6 +111,13 @@
           <instructions>
             <Bundle-Activator>com.aicas.tristan.cloudconnector.Activator
             </Bundle-Activator>
+
+            <!-- Remove Multi-Release JAR versioned class entries that bnd flags as "wrong directory" -->
+            <_remove>META-INF/versions/**</_remove>
+            <_fixupmessages>
+              "Classes found in the wrong directory";is:=ignore
+            </_fixupmessages>
+
             <Import-Package>
               org.osgi.framework,
               org.xml.sax,
