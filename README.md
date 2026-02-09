@@ -36,6 +36,9 @@ leap forward in open-source hardware and software utilization.
 - [Building the Project](#building-the-project)
 - [Running the Bundle in Apache Felix](#running-the-bundle-in-apache-felix)
 - [Running the Fat JAR](#running-the-fat-jar)
+- [Testing with Public or Local Brokers](#testing-with-public-or-local-brokers)
+- [CLI Options](#cli-options)
+- [Latency Monitoring](#latency-monitoring)
 - [Running the Bundle in JamaicaAMS](#running-the-bundle-in-jamaicaams)
 - [Contributing](#contributing)
 - [License](#license)
@@ -114,11 +117,23 @@ java -Dedg.device.token=<device-token> -jar bin/felix.jar
 
 ##### Option 2: Felix config.properties
 
-Edit Felix’s conf/config.properties file to set system properties:
+Edit Felix's conf/config.properties file to set system properties:
 
 ```bash
 edg.device.token=<device-token>
 ```
+
+#### Available System Properties
+
+| Property | Default | Description |
+|---|---|---|
+| `edg.server.uri` | `tcp://demo-jamaicaedg.aicas.com:1883` | The MQTT broker URI (must include `tcp://` or `ssl://` scheme) |
+| `edg.device.name` | `Tristan-CloudConnector-Demo-Device` | The unique device name registered on the broker |
+| `edg.device.token` | *(required)* | The access token for authenticating with the broker |
+| `edg.top.n` | `0` | When positive, only the first N scalar signals per data point are published. `0` = publish all |
+| `edg.truststore.path` | *(none)* | Path to JKS truststore for TLS connections |
+| `edg.truststore.password` | *(none)* | Password for the JKS truststore |
+| `edg.frequency` | `1.0` | Publishing frequency in messages per second (e.g. `2.0` = 2 msg/s, `0.5` = 1 msg every 2s) |
 
 ### Step 3: Install and Start the Bundle
 
@@ -130,13 +145,13 @@ g! install file:/path/to/cloud-connector-1.0.0-SNAPSHOT.jar
 g! start <bundle-id>
 ```
 
-Replace <bundle-id> with the actual ID of the installed bundle (you can get this
-from the `g! list` command).
+Replace `<bundle-id>` with the actual ID of the installed bundle (you can get
+this from the `g! list` command).
 
 ### Step 4: Verify the Connection
 
-The bundle will attempt to connect to the MQTT broker using the configuration in
-config.json. You should see logs indicating a successful connection.
+The bundle will attempt to connect to the MQTT broker using the configured
+system properties. You should see logs indicating a successful connection.
 
 ## Running the Fat JAR
 
@@ -146,11 +161,75 @@ Alternatively, you can run the fat JAR outside the OSGi container:
 java -jar /path/to/cloud-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar --token=<device-token> 
 ```
 
-You can get usage
+You can get usage information with:
 
 ```bash
 java -jar /path/to/cloud-connector-1.0.0-SNAPSHOT-jar-with-dependencies.jar --help 
 ```
+
+## CLI Options
+
+When running as a fat JAR, the following command-line options are available:
+
+| Option | Description | Default |
+|---|---|---|
+| `-s`, `--server` | The MQTT service URI | `tcp://demo-jamaicaedg.aicas.com:1883` |
+| `-d`, `--device` | The unique device name registered on the broker | `Tristan-CloudConnector-Demo-Device` |
+| `-t`, `--token` | The access token assigned to the device *(required)* | — |
+| `-n`, `--top-n` | Number of scalar signals to publish per data point (`0` = all) | `0` |
+| `-f`, `--frequency` | Publishing frequency in messages per second | `1.0` |
+| `--truststore` | Path to JKS truststore for TLS (`ssl://` scheme) | — |
+| `--truststore-password` | Password for the JKS truststore | — |
+
+## Testing with Public or Local Brokers
+
+### Local Mosquitto Broker
+
+For local development, you can use a [Mosquitto](https://mosquitto.org/) broker:
+
+```bash
+# Start a local Mosquitto broker
+mosquitto -p 1883 -v
+
+# Run the connector against localhost
+java -jar target/cloud-connector-*-jar-with-dependencies.jar \
+  --server tcp://localhost:1883 \
+  --token any-token
+```
+
+### Public test.mosquitto.org Broker
+
+The connector supports anonymous connections to `test.mosquitto.org`. When this
+broker is detected in the server URI, credentials are automatically skipped:
+
+```bash
+java -jar target/cloud-connector-*-jar-with-dependencies.jar \
+  --server tcp://test.mosquitto.org:1883 \
+  --token unused
+```
+
+> **Note:** The `--token` option is still required by the CLI parser, but its
+> value is ignored when connecting to `test.mosquitto.org`.
+
+## Latency Monitoring
+
+The connector measures **publish-to-ack latency** for each message (the time
+from when a message is submitted to the MQTT client until the broker confirms
+delivery via PUBACK). Messages are published at **QoS 1** to enable this
+measurement.
+
+- **Per-message latency** is logged at `DEBUG` level in milliseconds (ms).
+- **Average latency** is logged at `INFO` level at the end of the run.
+
+Example output:
+
+```
+DEBUG Message delivered id: 42, latency: 3 ms, confirmed so far: 42
+INFO  Average publish-to-ack latency: 2.4 ms (over 100 messages)
+```
+
+To see per-message latency logs, ensure the logging level is set to `DEBUG` in
+`logback.xml`.
 
 ## Running the Bundle in JamaicaAMS
 
@@ -180,4 +259,4 @@ software.
 
 ## Copyright
 
-Copyright 2024, aicas GmbH; all rights reserved.
+Copyright 2026, aicas GmbH; all rights reserved.
