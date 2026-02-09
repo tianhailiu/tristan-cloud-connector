@@ -1,5 +1,5 @@
 /*------------------------------------------------------------------------*
- * Copyright 2024, aicas GmbH; all rights reserved.
+ * Copyright 2026, aicas GmbH; all rights reserved.
  * This header, including copyright notice, may not be altered or removed.
  *------------------------------------------------------------------------*/
 package com.aicas.tristan.cloudconnector;
