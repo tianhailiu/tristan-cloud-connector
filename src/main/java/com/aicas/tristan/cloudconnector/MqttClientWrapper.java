@@ -131,7 +131,14 @@ public class MqttClientWrapper
     });
 
     MqttConnectOptions options = new MqttConnectOptions();
-    options.setUserName(accessToken);
+    if (!serverUri.contains("test.mosquitto.org"))
+    {
+      options.setUserName(accessToken);
+    }
+    else
+    {
+      log.info("Anonymous connection to test.mosquitto.org (skipping credentials)");
+    }
     options.setAutomaticReconnect(true);
     options.setConnectionTimeout(60);
     options.setKeepAliveInterval(60);
