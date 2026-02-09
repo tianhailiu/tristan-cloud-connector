@@ -28,7 +28,13 @@ public class Activator implements BundleActivator
                                           "tcp://demo-jamaicaedg.aicas.com:1883");
     String deviceName = System.getProperty("edg.device.name",
                                            "Tristan-CloudConnector-Demo-Device");
-    String deviceToken = System.getProperty("edg.device.token", "fake-token");
+    String deviceToken = System.getProperty("edg.device.token", "");
+    if (deviceToken == null || deviceToken.equals("") || "fake-token".equals(deviceToken))
+    {
+      log.error("A valid device token must be provided via the 'edg.device.token' system property. "
+                + "Please set -Dedg.device.token=<your-token> when starting the framework.");
+      return;
+    }
     int topN = Integer.parseInt(System.getProperty("edg.top.n", "0"));
     String trustStorePath = System.getProperty("edg.truststore.path");
     String trustStorePassword = System.getProperty("edg.truststore.password");
@@ -69,9 +75,18 @@ public class Activator implements BundleActivator
   private void printDescription()
   {
     String description = "TRISTAN Cloud Connector\n" +
-            "========================\n" +
-            "Tristan Cloud Connector is an OSGi bundle developed by aicas as part of the contributions to the EU-funded project TRISTAN. The bundle connects to the Edge Data Gateway (aicas EDG) to manage automotive data streams. This bundle is designed to run within an OSGi container, such as aicas JamaicaAMS and Apache Felix, but can also be packaged as a fat JAR for standalone execution.\n" +
-            "Copyright(c) 2024, aicas GmbH; all rights reserved.";
+      "*******************************\n" +
+      "Tristan Cloud Connector is an OSGi bundle developed by aicas \n" +
+      "as part of the contributions to the EU-funded project TRISTAN.\n" +
+      "\n" +
+      "The bundle connects to the Edge Data Gateway (aicas EDG) to \n" +
+      "manage automotive data streams. This bundle is designed to \n" +
+      "run within an OSGi container, such as aicas JamaicaAMS and \n" +
+      "Apache Felix, but can also be packaged as a fat JAR for \n" +
+      "standalone execution.\n" +
+      "\n" +
+      "Copyright(c) 2026, aicas GmbH; all rights reserved.\n" +
+      "*******************************";
     System.out.println(description);
   }
 }

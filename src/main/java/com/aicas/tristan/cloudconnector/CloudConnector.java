@@ -82,9 +82,18 @@ public class CloudConnector implements Runnable
   private void printDescription()
   {
     String description = "TRISTAN Cloud Connector\n" +
-      "========================\n" +
-      "Tristan Cloud Connector is an OSGi bundle developed by aicas as part of the contributions to the EU-funded project TRISTAN. The bundle connects to the Edge Data Gateway (aicas EDG) to manage automotive data streams. This bundle is designed to run within an OSGi container, such as aicas JamaicaAMS and Apache Felix, but can also be packaged as a fat JAR for standalone execution.\n" +
-      "Copyright(c) 2024, aicas GmbH; all rights reserved.";
+      "*******************************\n" +
+      "Tristan Cloud Connector is an OSGi bundle developed by aicas \n" +
+      "as part of the contributions to the EU-funded project TRISTAN.\n" +
+      "\n" +
+      "The bundle connects to the Edge Data Gateway (aicas EDG) to \n" +
+      "manage automotive data streams. This bundle is designed to \n" +
+      "run within an OSGi container, such as aicas JamaicaAMS and \n" +
+      "Apache Felix, but can also be packaged as a fat JAR for \n" +
+      "standalone execution.\n" +
+      "\n" +
+      "Copyright(c) 2026, aicas GmbH; all rights reserved.\n" +
+      "*******************************";
     System.out.println(description);
   }
 
