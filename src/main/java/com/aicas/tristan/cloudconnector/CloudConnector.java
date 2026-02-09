@@ -108,6 +108,14 @@ public class CloudConnector implements Runnable
       new DataProcessor(mqttClient, "automotive-trace.json", topN, frequencyHz);
     executorService.submit(dataProcessor);
 
+      double avgLatency = mqttClient.getAverageLatencyMs();
+      if (avgLatency >= 0)
+      {
+        log.info("Average publish-to-ack latency: {} ms (over {} messages)",
+                 String.format("%.1f", avgLatency),
+                 mqttClient.getLatencySampleCount());
+      }
+
     Runtime.getRuntime()
       .addShutdownHook(new Thread(executorService::shutdownNow));
 

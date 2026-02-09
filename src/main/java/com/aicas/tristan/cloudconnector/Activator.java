@@ -70,6 +70,17 @@ public class Activator implements BundleActivator
         log.error("Exception happens when disconnecting MQTT client", e);
       }
     }
+
+    if (mqttClient != null)
+    {
+      double avgLatency = mqttClient.getAverageLatencyMs();
+      if (avgLatency >= 0)
+      {
+        log.info("Average publish-to-ack latency: {} ms (over {} messages)",
+                 String.format("%.1f", avgLatency),
+                 mqttClient.getLatencySampleCount());
+      }
+    }
   }
 
   private void printDescription()

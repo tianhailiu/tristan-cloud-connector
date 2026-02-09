@@ -44,7 +44,7 @@ public class MqttClientWrapper
   private final AtomicLong confirmedCount = new AtomicLong(0);
   private final AtomicLong failedCount = new AtomicLong(0);
   private final ConcurrentHashMap<Integer, Long> publishTimestamps = new ConcurrentHashMap<>();
-  private final AtomicLong totalLatencyUs = new AtomicLong(0);
+  private final AtomicLong totalLatencyMs = new AtomicLong(0);
   private final AtomicLong latencySampleCount = new AtomicLong(0);
 
   /**
@@ -113,14 +113,14 @@ public class MqttClientWrapper
       {
         MqttDeliveryToken token = (MqttDeliveryToken) iMqttDeliveryToken;
         long confirmed = confirmedCount.incrementAndGet();
-        Long publishTimeNs = publishTimestamps.remove(token.getMessageId());
-        if (publishTimeNs != null)
+        Long publishTimeMs = publishTimestamps.remove(token.getMessageId());
+        if (publishTimeMs != null)
         {
-          long latencyUs = (System.nanoTime() - publishTimeNs) / 1000;
-          totalLatencyUs.addAndGet(latencyUs);
+          long latencyMs = System.currentTimeMillis() - publishTimeMs;
+          totalLatencyMs.addAndGet(latencyMs);
           latencySampleCount.incrementAndGet();
-          log.debug("Message delivered id: {}, latency: {} µs, confirmed so far: {}",
-                    token.getMessageId(), latencyUs, confirmed);
+          log.debug("Message delivered id: {}, latency: {} ms, confirmed so far: {}",
+                    token.getMessageId(), latencyMs, confirmed);
         }
         else
         {
@@ -197,7 +197,7 @@ public class MqttClientWrapper
     try
     {
       IMqttDeliveryToken token = client.publish(topic, message);
-      publishTimestamps.put(token.getMessageId(), System.nanoTime());
+      publishTimestamps.put(token.getMessageId(), System.currentTimeMillis());
       publishedCount.incrementAndGet();
     }
     catch (MqttException e)
@@ -241,16 +241,16 @@ public class MqttClientWrapper
    * Returns the average publish-to-ack latency in microseconds,
    * or -1 if no samples have been recorded.
    *
-   * @return the average latency in microseconds.
+   * @return the average latency in milliseconds.
    */
-  public double getAverageLatencyUs()
+  public double getAverageLatencyMs()
   {
     long samples = latencySampleCount.get();
     if (samples == 0)
     {
       return -1;
     }
-    return totalLatencyUs.get() / (double) samples;
+    return totalLatencyMs.get() / (double) samples;
   }
 
   /**
