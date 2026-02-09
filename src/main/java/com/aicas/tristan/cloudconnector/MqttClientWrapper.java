@@ -22,6 +22,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.KeyStore;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The {@code MqttClientWrapper} class encapsulates operations for connecting to,
@@ -38,6 +39,9 @@ public class MqttClientWrapper
   private final String trustStorePath;
   private final String trustStorePassword;
   private MqttAsyncClient client;
+  private final AtomicLong publishedCount = new AtomicLong(0);
+  private final AtomicLong confirmedCount = new AtomicLong(0);
+  private final AtomicLong failedCount = new AtomicLong(0);
 
   /**
    * Constructs an instance of the MQTT client wrapper (plain TCP, no TLS).
@@ -104,7 +108,9 @@ public class MqttClientWrapper
       public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken)
       {
         MqttDeliveryToken token = (MqttDeliveryToken) iMqttDeliveryToken;
-        log.debug("Message delivered id: {}", token.getMessageId());
+        long confirmed = confirmedCount.incrementAndGet();
+        log.debug("Message delivered id: {}, confirmed so far: {}",
+                  token.getMessageId(), confirmed);
       }
     });
 
@@ -164,7 +170,46 @@ public class MqttClientWrapper
     MqttException
   {
     MqttMessage message = new MqttMessage(payload.getBytes());
-    client.publish(topic, message);
+    try
+    {
+      client.publish(topic, message);
+      publishedCount.incrementAndGet();
+    }
+    catch (MqttException e)
+    {
+      failedCount.incrementAndGet();
+      throw e;
+    }
+  }
+
+  /**
+   * Returns the number of messages successfully submitted for publishing.
+   *
+   * @return the published message count.
+   */
+  public long getPublishedCount()
+  {
+    return publishedCount.get();
+  }
+
+  /**
+   * Returns the number of messages whose delivery has been confirmed by the broker.
+   *
+   * @return the confirmed message count.
+   */
+  public long getConfirmedCount()
+  {
+    return confirmedCount.get();
+  }
+
+  /**
+   * Returns the number of messages that failed to be submitted for publishing.
+   *
+   * @return the failed message count.
+   */
+  public long getFailedCount()
+  {
+    return failedCount.get();
   }
 
   /**

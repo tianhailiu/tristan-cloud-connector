@@ -136,6 +136,16 @@ public class DataProcessor implements Runnable
     finally
     {
       scheduler.shutdownNow();
+      log.info("Publishing complete — published: {}, confirmed: {}, failed: {}",
+               mqttClient.getPublishedCount(),
+               mqttClient.getConfirmedCount(),
+               mqttClient.getFailedCount());
+      long lost = mqttClient.getPublishedCount() - mqttClient.getConfirmedCount();
+      if (lost > 0)
+      {
+        log.warn("Potential data loss: {} messages published but not confirmed",
+                 lost);
+      }
       try
       {
         log.info("Disconnect MQTT connection");
