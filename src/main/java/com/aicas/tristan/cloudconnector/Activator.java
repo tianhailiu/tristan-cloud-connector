@@ -29,10 +29,14 @@ public class Activator implements BundleActivator
     String deviceName = System.getProperty("edg.device.name",
                                            "Tristan-CloudConnector-Demo-Device");
     String deviceToken = System.getProperty("edg.device.token", "fake-token");
+    int topN = Integer.parseInt(System.getProperty("edg.top.n", "0"));
+    String trustStorePath = System.getProperty("edg.truststore.path");
+    String trustStorePassword = System.getProperty("edg.truststore.password");
 
     executorService = Executors.newCachedThreadPool();
-    mqttClient = new MqttClientWrapper(serverUri, deviceName, deviceToken);
-    DataProcessor dataProcessor = new DataProcessor(mqttClient, "automotive-trace.json");
+    mqttClient = new MqttClientWrapper(serverUri, deviceName, deviceToken,
+                                       trustStorePath, trustStorePassword);
+    DataProcessor dataProcessor = new DataProcessor(mqttClient, "automotive-trace.json", topN);
     executorService.submit(dataProcessor);
   }
 

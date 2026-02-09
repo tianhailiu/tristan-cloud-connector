@@ -16,7 +16,12 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 
-import java.net.ConnectException;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.security.KeyStore;
 
 /**
  * The {@code MqttClientWrapper} class encapsulates operations for connecting to,
@@ -30,21 +35,44 @@ public class MqttClientWrapper
   private final String serverUri;
   private final String deviceName;
   private final String accessToken;
+  private final String trustStorePath;
+  private final String trustStorePassword;
   private MqttAsyncClient client;
 
   /**
-   * Constructs an instance of the MQTT client wrapper.
+   * Constructs an instance of the MQTT client wrapper (plain TCP, no TLS).
    *
-   * @param serverUri the URI of the MQTT server to connect to.
-   * @param deviceName the device name
+   * @param serverUri   the URI of the MQTT server to connect to.
+   * @param deviceName  the device name.
    * @param accessToken the access token for authenticating with the MQTT server.
    */
   public MqttClientWrapper(String serverUri, String deviceName,
                            String accessToken)
   {
+    this(serverUri, deviceName, accessToken, null, null);
+  }
+
+  /**
+   * Constructs an instance of the MQTT client wrapper with optional TLS support.
+   * When {@code trustStorePath} is non-null, the connection uses SSL/TLS and the
+   * server URI should start with {@code ssl://}.
+   *
+   * @param serverUri          the URI of the MQTT server (e.g. {@code ssl://host:8883}).
+   * @param deviceName         the device name.
+   * @param accessToken        the access token for authenticating with the MQTT server.
+   * @param trustStorePath     path to the JKS truststore containing the server certificate,
+   *                           or {@code null} for plain TCP.
+   * @param trustStorePassword password for the truststore, or {@code null}.
+   */
+  public MqttClientWrapper(String serverUri, String deviceName,
+                           String accessToken, String trustStorePath,
+                           String trustStorePassword)
+  {
     this.serverUri = serverUri;
     this.deviceName = deviceName;
     this.accessToken = accessToken;
+    this.trustStorePath = trustStorePath;
+    this.trustStorePassword = trustStorePassword;
   }
 
   /**
@@ -63,13 +91,11 @@ public class MqttClientWrapper
       @Override
       public void connectionLost(Throwable me)
       {
-        log.error("Connection lost: {}", me.getMessage());
+        log.error("Connection lost", me);
       }
 
       @Override
-      public void messageArrived(String s, MqttMessage mqttMessage)
-        throws
-        Exception
+      public void messageArrived(String s, MqttMessage mqttMessage) throws Exception
       {
         log.debug("Message arrived: {}", s);
       }
@@ -81,26 +107,42 @@ public class MqttClientWrapper
         log.debug("Message delivered id: {}", token.getMessageId());
       }
     });
+
     MqttConnectOptions options = new MqttConnectOptions();
     options.setUserName(accessToken);
     options.setAutomaticReconnect(true);
     options.setConnectionTimeout(60);
     options.setKeepAliveInterval(60);
-    client.connect(options, null, new IMqttActionListener()
-    {
-      @Override
-      public void onSuccess(IMqttToken iMqttToken)
-      {
-        log.info("Connected to Cloud.");
-      }
 
-      @Override
-      public void onFailure(IMqttToken iMqttToken, Throwable e)
+    if (trustStorePath != null)
+    {
+      options.setSocketFactory(createSslSocketFactory(trustStorePath,
+                                                      trustStorePassword));
+      log.info("TLS enabled using truststore: {}", trustStorePath);
+    }
+
+    try
+    {
+      client.connect(options, null, new IMqttActionListener()
       {
-        log.error("Failed to connect {} to Cloud: {}", deviceName,
-                  e.getMessage());
-      }
-    }).waitForCompletion();
+        @Override
+        public void onSuccess(IMqttToken iMqttToken)
+        {
+          log.info("Connected to Cloud.");
+        }
+
+        @Override
+        public void onFailure(IMqttToken iMqttToken, Throwable e)
+        {
+          log.error("Failed to connect {} to Cloud", deviceName, e);
+        }
+      }).waitForCompletion();
+    }
+    catch (MqttException e)
+    {
+      log.error("Connect failed (reasonCode={}): {}", e.getReasonCode(), e.getMessage(), e);
+      throw e;
+    }
   }
 
   /**
@@ -157,5 +199,39 @@ public class MqttClientWrapper
   public void setClient(MqttAsyncClient client)
   {
     this.client = client;
+  }
+
+  /**
+   * Creates an {@link SSLSocketFactory} that trusts the server certificate(s)
+   * stored in the given JKS truststore. This enables one-way TLS where the
+   * client verifies the server's identity.
+   *
+   * @param trustStorePath     path to the JKS truststore file.
+   * @param trustStorePassword password for the truststore.
+   * @return an SSLSocketFactory configured with the truststore.
+   * @throws Exception if the truststore cannot be loaded or the SSL context
+   *                   cannot be initialized.
+   */
+  private static SSLSocketFactory createSslSocketFactory(String trustStorePath,
+                                                         String trustStorePassword)
+    throws
+    Exception
+  {
+    KeyStore trustStore = KeyStore.getInstance("JKS");
+    try (InputStream tsInputStream = new FileInputStream(trustStorePath))
+    {
+      trustStore.load(tsInputStream,
+                      trustStorePassword != null
+                        ? trustStorePassword.toCharArray()
+                        : null);
+    }
+
+    TrustManagerFactory tmf =
+      TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+    tmf.init(trustStore);
+
+    SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+    sslContext.init(null, tmf.getTrustManagers(), null);
+    return sslContext.getSocketFactory();
   }
 }

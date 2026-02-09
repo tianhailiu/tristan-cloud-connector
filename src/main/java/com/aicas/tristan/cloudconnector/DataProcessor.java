@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,16 +27,33 @@ public class DataProcessor implements Runnable
     org.slf4j.LoggerFactory.getLogger(DataProcessor.class);
   private final MqttClientWrapper mqttClient;
   private final String traceFile;
+  private final int topN;
 
   /**
    * Constructs an instance of the DataProcessor.
    *
    * @param mqttClient the MQTT client wrapper to use for publishing messages.
+   * @param traceFile  the path to the trace file.
    */
   public DataProcessor(MqttClientWrapper mqttClient, String traceFile)
   {
+    this(mqttClient, traceFile, 0);
+  }
+
+  /**
+   * Constructs an instance of the DataProcessor with a configurable top-N mode.
+   * When {@code topN} is greater than zero, only the first N scalar (non-array)
+   * signals from each data point are published.
+   *
+   * @param mqttClient the MQTT client wrapper to use for publishing messages.
+   * @param traceFile  the path to the trace file.
+   * @param topN       the number of scalar signals to include (0 or negative means all).
+   */
+  public DataProcessor(MqttClientWrapper mqttClient, String traceFile, int topN)
+  {
     this.mqttClient = mqttClient;
     this.traceFile = traceFile;
+    this.topN = topN;
   }
 
   /**
@@ -55,7 +73,9 @@ public class DataProcessor implements Runnable
       ObjectMapper mapper = new ObjectMapper();
       for (Map<String, Object> dataPoint : traceData)
       {
-        String payload = mapper.writeValueAsString(dataPoint);
+        Map<String, Object> effectivePayload =
+          topN > 0 ? selectTopNScalars(dataPoint, topN) : dataPoint;
+        String payload = mapper.writeValueAsString(effectivePayload);
         log.trace("{} publishes a message {}", mqttClient.getDeviceName(),
                   payload);
         mqttClient.publish("v1/devices/me/telemetry", payload);
@@ -64,7 +84,7 @@ public class DataProcessor implements Runnable
     }
     catch (Exception e)
     {
-      log.error(e.getMessage());
+      log.error("DataProcessor failed", e);
     }
     finally
     {
@@ -75,7 +95,7 @@ public class DataProcessor implements Runnable
       }
       catch (MqttException e)
       {
-        throw new RuntimeException(e);
+        log.warn("Failed to disconnect cleanly", e);
       }
     }
   }
@@ -118,5 +138,35 @@ public class DataProcessor implements Runnable
                                     {
                                     });
     }
+  }
+
+  /**
+   * Selects the first {@code n} scalar (non-collection) signals from the given
+   * data point map, preserving the original insertion order.
+   * Entries whose values are arrays/lists are skipped and not counted.
+   *
+   * @param dataPoint the original data point.
+   * @param n         the maximum number of scalar signals to include.
+   * @return a new map containing at most {@code n} scalar entries.
+   */
+  static Map<String, Object> selectTopNScalars(Map<String, Object> dataPoint,
+                                               int n)
+  {
+    Map<String, Object> result = new LinkedHashMap<>();
+    int count = 0;
+    for (Map.Entry<String, Object> entry : dataPoint.entrySet())
+    {
+      if (count >= n)
+      {
+        break;
+      }
+      if (entry.getValue() instanceof List || entry.getValue() instanceof Object[])
+      {
+        continue; // skip array-like values and don't count them
+      }
+      result.put(entry.getKey(), entry.getValue());
+      count++;
+    }
+    return result;
   }
 }

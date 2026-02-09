@@ -40,6 +40,24 @@ public class CloudConnector implements Runnable
     required = true)
   private String deviceToken;
 
+  @CommandLine.Option(
+    names = { "-n", "--top-n" },
+    description = "When set to a positive value, only the first N scalar signals " +
+      "(non-array) from each trace data point are published. 0 means publish all.",
+    defaultValue = "0")
+  private int topN;
+
+  @CommandLine.Option(
+    names = { "--truststore" },
+    description = "Path to the JKS truststore for TLS connections. " +
+      "When specified, the server URI should use ssl:// scheme (e.g. ssl://host:8883).")
+  private String trustStorePath;
+
+  @CommandLine.Option(
+    names = { "--truststore-password" },
+    description = "Password for the JKS truststore.")
+  private String trustStorePassword;
+
   private static final Logger log =
     org.slf4j.LoggerFactory.getLogger(CloudConnector.class);
 
@@ -68,9 +86,10 @@ public class CloudConnector implements Runnable
   {
     ExecutorService executorService = Executors.newCachedThreadPool();
     MqttClientWrapper mqttClient =
-      new MqttClientWrapper(serverURI, deviceName, deviceToken);
+      new MqttClientWrapper(serverURI, deviceName, deviceToken,
+                            trustStorePath, trustStorePassword);
     DataProcessor dataProcessor =
-      new DataProcessor(mqttClient, "automotive-trace.json");
+      new DataProcessor(mqttClient, "automotive-trace.json", topN);
     executorService.submit(dataProcessor);
 
     Runtime.getRuntime()
