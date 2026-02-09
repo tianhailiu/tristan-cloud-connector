@@ -231,6 +231,25 @@ INFO  Average publish-to-ack latency: 2.4 ms (over 100 messages)
 To see per-message latency logs, ensure the logging level is set to `DEBUG` in
 `logback.xml`.
 
+## Scheduling Jitter
+
+The connector also measures **scheduling jitter** — the deviation between the
+actual publish interval and the expected interval (derived from the configured
+frequency). For example, at a frequency of 1.0 Hz the expected interval is
+1000 ms; if the actual interval between two consecutive publishes is 1003 ms,
+the jitter (delta) is 3 ms. Both shorter and longer intervals are counted as
+positive deltas.
+
+- **Per-interval jitter** is logged at `DEBUG` level.
+- **Average jitter** is logged at `INFO` level at the end of the run.
+
+Example output:
+
+```
+DEBUG Scheduling jitter: interval=1003 ms, expected=1000 ms, delta=3 ms
+INFO  Average scheduling jitter: 4.2 ms (over 99 intervals, expected interval: 1000 ms)
+```
+
 ## Running the Bundle in JamaicaAMS
 
 **JamaicaAMS** (Application Management System, AMS) is a modular and extensible
