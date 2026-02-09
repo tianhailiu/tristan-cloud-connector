@@ -90,6 +90,9 @@ public class DataProcessor implements Runnable
   public void run()
   {
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    final long[] lastPublishTimeMs = { 0 };
+    final long[] totalJitterMs = { 0 };
+    final long[] jitterSampleCount = { 0 };
     try
     {
       log.info("Connect {} to aicas EDG {}", mqttClient.getDeviceName(),
@@ -117,6 +120,18 @@ public class DataProcessor implements Runnable
         }
         try
         {
+          long now = System.currentTimeMillis();
+          if (lastPublishTimeMs[0] > 0)
+          {
+            long actualIntervalMs = now - lastPublishTimeMs[0];
+            long jitterMs = Math.abs(actualIntervalMs - publishIntervalMs);
+            totalJitterMs[0] += jitterMs;
+            jitterSampleCount[0]++;
+            log.debug("Scheduling jitter: interval={} ms, expected={} ms, delta={} ms",
+                      actualIntervalMs, publishIntervalMs, jitterMs);
+          }
+          lastPublishTimeMs[0] = now;
+
           Map<String, Object> dataPoint = iterator.next();
           Map<String, Object> effectivePayload =
             topN > 0 ? selectTopNScalars(dataPoint, topN) : dataPoint;
@@ -153,6 +168,14 @@ public class DataProcessor implements Runnable
         log.info("Average publish-to-ack latency: {} ms (over {} messages)",
                  String.format("%.1f", avgLatency),
                  mqttClient.getLatencySampleCount());
+      }
+      if (jitterSampleCount[0] > 0)
+      {
+        double avgJitter = totalJitterMs[0] / (double) jitterSampleCount[0];
+        log.info("Average scheduling jitter: {} ms (over {} intervals, expected interval: {} ms)",
+                 String.format("%.1f", avgJitter),
+                 jitterSampleCount[0],
+                 publishIntervalMs);
       }
       long lost = mqttClient.getPublishedCount() - mqttClient.getConfirmedCount();
       if (lost > 0)
