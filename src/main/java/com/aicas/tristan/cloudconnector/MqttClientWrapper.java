@@ -43,7 +43,7 @@ public class MqttClientWrapper
   private final AtomicLong publishedCount = new AtomicLong(0);
   private final AtomicLong confirmedCount = new AtomicLong(0);
   private final AtomicLong failedCount = new AtomicLong(0);
-  private final ConcurrentHashMap<Integer, Long> publishTimestamps = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<IMqttDeliveryToken, Long> publishTimestamps = new ConcurrentHashMap<>();
   private final AtomicLong totalLatencyMs = new AtomicLong(0);
   private final AtomicLong latencySampleCount = new AtomicLong(0);
 
@@ -196,8 +196,8 @@ public class MqttClientWrapper
     message.setQos(1);
     try
     {
+      publishTimestamps.put(token, System.currentTimeMillis());
       IMqttDeliveryToken token = client.publish(topic, message);
-      publishTimestamps.put(token.getMessageId(), System.currentTimeMillis());
       publishedCount.incrementAndGet();
     }
     catch (MqttException e)
