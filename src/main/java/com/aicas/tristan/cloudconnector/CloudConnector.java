@@ -4,22 +4,16 @@
  *------------------------------------------------------------------------*/
 package com.aicas.tristan.cloudconnector;
 
-import org.slf4j.Logger;
 import picocli.CommandLine;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @CommandLine.Command(
   footer = "Copyright(c) 2024, aicas GmbH; all rights reserved.",
   description = "Sends automotive data to data visualization server supporting MQTT connection.",
-  mixinStandardHelpOptions = true,
-  versionProvider = ManifestVersionProvider.class)
+  mixinStandardHelpOptions = true)
 public class CloudConnector implements Runnable
 {
   @CommandLine.Option(
@@ -65,9 +59,6 @@ public class CloudConnector implements Runnable
     defaultValue = "1.0")
   private double frequencyHz;
 
-  private static final Logger log =
-    org.slf4j.LoggerFactory.getLogger(CloudConnector.class);
-
   public static void main(String[] args)
   {
     CloudConnector cloudConnector = new CloudConnector();
@@ -106,61 +97,18 @@ public class CloudConnector implements Runnable
                             trustStorePath, trustStorePassword);
     DataProcessor dataProcessor =
       new DataProcessor(mqttClient, "automotive-trace.json", topN, frequencyHz);
-    executorService.submit(dataProcessor);
-
-    Runtime.getRuntime()
-      .addShutdownHook(new Thread(executorService::shutdownNow));
-
     try
     {
-      Thread.currentThread().join();
+      Future<?> future = executorService.submit(dataProcessor);
+      future.get();
     }
-    catch (InterruptedException e)
+    catch (Exception e)
     {
       throw new RuntimeException(e);
     }
-  }
-
-  private void printLogo()
-  {
-    String artFile = "ascii-text-art.txt";
-    try (InputStream inputStream = getClass().getClassLoader()
-      .getResourceAsStream(artFile);
-         InputStreamReader inputStreamReader = new InputStreamReader(
-           Objects.requireNonNull(inputStream));
-         BufferedReader reader = new BufferedReader(inputStreamReader))
+    finally
     {
-      while (reader.ready())
-      {
-        System.out.println(reader.readLine());
-      }
+      executorService.shutdown();
     }
-    catch (IOException e)
-    {
-      throw new RuntimeException(e);
-    }
-  }
-}
-
-class ManifestVersionProvider implements CommandLine.IVersionProvider
-{
-  @Override
-  public String[] getVersion()
-    throws
-    Exception
-  {
-    String version = VersionUtil.getVersion();
-    return new String[]{ "Cloud Connector version: " + version };
-  }
-}
-
-class VersionUtil
-{
-  public static String getVersion()
-  {
-    Package pkg = VersionUtil.class.getPackage();
-    return (pkg != null && pkg.getImplementationVersion() != null)
-      ? pkg.getImplementationVersion()
-      : "Unknown version";
   }
 }
