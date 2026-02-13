@@ -113,7 +113,7 @@ public class MqttClientWrapper
       {
         MqttDeliveryToken token = (MqttDeliveryToken) iMqttDeliveryToken;
         long confirmed = confirmedCount.incrementAndGet();
-        Long publishTimeMs = publishTimestamps.remove(token.getMessageId());
+        Long publishTimeMs = publishTimestamps.remove(token);
         if (publishTimeMs != null)
         {
           long latencyMs = System.currentTimeMillis() - publishTimeMs;
