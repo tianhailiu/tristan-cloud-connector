@@ -196,8 +196,8 @@ public class MqttClientWrapper
     message.setQos(1);
     try
     {
-      publishTimestamps.put(token, System.currentTimeMillis());
       IMqttDeliveryToken token = client.publish(topic, message);
+      publishTimestamps.put(token, System.currentTimeMillis());
       publishedCount.incrementAndGet();
     }
     catch (MqttException e)
