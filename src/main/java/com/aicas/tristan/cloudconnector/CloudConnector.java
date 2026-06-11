@@ -96,7 +96,7 @@ public class CloudConnector implements Runnable
       new MqttClientWrapper(serverURI, deviceName, deviceToken,
                             trustStorePath, trustStorePassword);
     DataProcessor dataProcessor =
-      new DataProcessor(mqttClient, "automotive-trace.json", topN, frequencyHz);
+      new DataProcessor(mqttClient, "automotive-trace-full.json", topN, frequencyHz);
     try
     {
       Future<?> future = executorService.submit(dataProcessor);
